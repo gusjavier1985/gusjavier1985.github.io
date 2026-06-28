@@ -13,16 +13,12 @@
 <div id="resultado" style="margin-top: 10px; font-weight: bold;"></div>
 
 <script>
-// --- PEGA TU CLAVE ABAJO ENTRE LAS COMILLAS ---
 const API_KEY = 'AIzaSyAiylSNm5n8xVtbN3dhmFhZFn6K3N5NsSQ';
-// ----------------------------------------------
-
 const micBtn = document.getElementById('mic-btn');
 const status = document.getElementById('status');
 const resultado = document.getElementById('resultado');
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 recognition.lang = 'es-ES';
 
 micBtn.onclick = () => {
@@ -42,23 +38,18 @@ headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({ contents: [{ parts: [{ text: texto }] }] })
 });
 
+if (!response.ok) {
+const errData = await response.json();
+status.innerText = "Error API (" + response.status + "): " + errData.error.message;
+return;
+}
+
 const data = await response.json();
 const respuesta = data.candidates[0].content.parts[0].text;
-
 status.innerText = "PACO: " + respuesta;
-
-// Opcional: El navegador habla la respuesta
-const voz = new SpeechSynthesisUtterance(respuesta);
-voz.lang = 'es-ES';
-window.speechSynthesis.speak(voz);
-
 } catch (error) {
-status.innerText = "Error: " + error.message;
+status.innerText = "Error de conexión: " + error.message;
 }
-};
-
-recognition.onerror = (event) => {
-status.innerText = "Error de voz: " + event.error;
 };
 </script>
 </body>
