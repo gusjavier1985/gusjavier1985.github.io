@@ -1,58 +1,46 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente PACO</title>
+<meta charset="UTF-8">
+<title>Asistente PACO</title>
 </head>
 <body style="text-align: center; font-family: sans-serif; padding: 20px;">
+<h1>Asistente PACO</h1>
+<button id="mic-btn" style="background-color: #512da8; color: white; padding: 20px; border-radius: 20px; border: none; font-size: 20px;">🎙️ Hablar con PACO</button>
+<div id="resultado" style="margin-top: 20px;"></div>
+<div id="respuesta-paco" style="margin-top: 20px; font-weight: bold; color: #2e7d32;"></div>
 
-    <h1>Asistente PACO</h1>
-    <p>Línea B • Sector Tráfico</p>
+<script>
+const API_KEY = '.AIzaSyAiylSNm5n8xVtbN3dhmFhZFn6K3N5NsSQ'; // <--- PONÉ TU CLAVE ACÁ
+const micBtn = document.getElementById('mic-btn');
+const resultado = document.getElementById('resultado');
+const respuestaPaco = document.getElementById('respuesta-paco');
 
-    <button id="mic-btn" style="background-color: #512da8; color: white; padding: 20px; border-radius: 20px; border: none; font-size: 20px; cursor: pointer;">
-        🎙️ Hablar con PACO
-    </button>
-    
-    <div id="resultado" style="margin-top: 20px; font-size: 18px; color: #333;"></div>
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'es-ES';
 
-    <script>
-        const micBtn = document.getElementById('mic-btn');
-        const resultado = document.getElementById('resultado');
+micBtn.onclick = () => {
+resultado.innerText = "Escuchando...";
+recognition.start();
+};
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'es-ES';
-        recognition.continuous = false; 
+recognition.onresult = async (event) => {
+const texto = event.results[0][0].transcript;
+resultado.innerText = "Dijiste: " + texto;
+respuestaPaco.innerText = "PACO está pensando...";
 
-        let estaEscuchando = false;
+// Llamada a Gemini
+const response = await fetch(https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ contents: [{ parts: [{ text: texto }] }] })
+});
 
-        micBtn.onclick = () => {
-            if (estaEscuchando) {
-                recognition.stop();
-                resultado.innerText = "Detenido manualmente.";
-                estaEscuchando = false;
-            } else {
-                recognition.start();
-                resultado.innerText = "Escuchando... (Apretá de nuevo para parar)";
-                estaEscuchando = true;
-            }
-        };
-
-        recognition.onresult = (event) => {
-            const texto = event.results[0][0].transcript;
-            resultado.innerText = "Dijiste: " + texto;
-            estaEscuchando = false;
-        };
-
-        recognition.onend = () => {
-            estaEscuchando = false;
-        };
-
-        recognition.onerror = (event) => {
-            resultado.innerText = "Error: " + event.error;
-            estaEscuchando = false;
-        };
-    </script>
+const data = await response.json();
+const respuesta = data.candidates[0].content.parts[0].text;
+respuestaPaco.innerText = "PACO dice: " + respuesta;
+};
+</script>
 </body>
 </html>
+
