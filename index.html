@@ -1,65 +1,78 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Asistente PACO</title>
+    <meta charset="UTF-8">
+    <title>Asistente PACO</title>
 </head>
 <body style="text-align: center; font-family: sans-serif; padding: 20px;">
-<h1>Asistente PACO</h1>
-<button id="btn" style="padding:20px; font-size:20px; cursor:pointer;">🎙️ Hablar con PACO</button>
-<p id="status">Presioná el botón para hablar</p>
-<p id="resultado" style="font-weight: bold;"></p>
+    <h1>Asistente PACO</h1>
+    <button id="btn" style="padding:20px; font-size:20px; cursor:pointer;">🎙️ Hablar con PACO</button>
+    <p id="status">Presioná el botón para hablar</p>
+    <p id="resultado" style="font-weight: bold;"></p>
 
-<script>
-const p1 ='gsk_';
-const p2 ='ZAU5oV6YgQ199vwmk0kFWGdyb3FYOIYJbkWwJbgjdLDIl9Nzqu4Z'; // Tu clave aquí
-const API_KEY = p1 + p2;
+    <script>
+        const p1 = 'gsk_';
+        const p2 = 'ZAU5oV6YgQ199vwmk0kFWGdyb3FYOIYJbkWwJbgjdLDIl9Nzqu4Z';
+        const API_KEY = p1 + p2;
+        
+        const btn = document.getElementById('btn');
+        const status = document.getElementById('status');
+        const resultado = document.getElementById('resultado');
+        
+        btn.onclick = () => {
+            // Verificamos si el navegador soporta voz
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                status.innerText = "Error: Tu navegador no soporta reconocimiento de voz.";
+                return;
+            }
 
-const btn = document.getElementById('btn');
-const status = document.getElementById('status');
-const resultado = document.getElementById('resultado');
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES';
+            
+            recognition.onstart = () => { status.innerText = "🎤 Escuchando..."; };
+            
+            recognition.onresult = async (e) => {
+                const texto = e.results[0][0].transcript;
+                resultado.innerText = "Dijiste: " + texto;
+                status.innerText = "Pensando...";
+                
+                try {
+                    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                        method: 'POST',
+                        headers: { 
+                            // ¡IMPORTANTE!: Comillas invertidas aquí:
+                            'Authorization': `Bearer ${API_KEY}`,
+                            'Content-Type': 'application/json' 
+                        },
+                        body: JSON.stringify({
+                            model: "llama3-8b-8192",
+                            messages: [{ role: "user", content: texto }]
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Verificamos si Groq respondió con error
+                    if (data.error) {
+                        status.innerText = "Error de Groq: " + data.error.message;
+                    } else {
+                        const pacoRespuesta = data.choices[0].message.content;
+                        status.innerText = "PACO: " + pacoRespuesta;
 
-btn.onclick = () => {
-const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-recognition.lang = 'es-ES';
+                        const voz = new SpeechSynthesisUtterance(pacoRespuesta);
+                        voz.lang = 'es-ES';
+                        window.speechSynthesis.speak(voz);
+                    }
 
-recognition.onstart = () => { status.innerText = "🎤 Escuchando..."; };
-
-recognition.onresult = async (e) => {
-const texto = e.results[0][0].transcript;
-resultado.innerText = "Dijiste: " + texto;
-status.innerText = "Pensando...";
-
-try {
-const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-method: 'POST',
-headers: {
-'Authorization': Bearer ${API_KEY},
-'Content-Type': 'application/json'
-},
-body: JSON.stringify({
-model: "llama3-8b-8192",
-messages: [{ role: "user", content: texto }]
-})
-});
-
-const data = await response.json();
-const pacoRespuesta = data.choices[0].message.content;
-status.innerText = "PACO: " + pacoRespuesta;
-
-const voz = new SpeechSynthesisUtterance(pacoRespuesta);
-voz.lang = 'es-ES';
-window.speechSynthesis.speak(voz);
-
-} catch (error) {
-status.innerText = "Error: " + error.message;
-}
-};
-
-recognition.onerror = (e) => { status.innerText = "Error: " + e.error; };
-recognition.start();
-};
-</script>
+                } catch (error) {
+                    status.innerText = "Error de conexión: " + error.message;
+                }
+            };
+            
+            recognition.onerror = (e) => { status.innerText = "Error de micrófono: " + e.error; };
+            recognition.start();
+        };
+    </script>
 </body>
 </html>
-
